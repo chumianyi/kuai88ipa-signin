@@ -3,16 +3,16 @@ package com.kuai88ipa.signin
 import android.content.Context
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.Cookie
+import okhttp3.CookieJar
 import okhttp3.FormBody
-import okhttp3.JavaNetCookieJar
+import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.IOException
-import java.net.CookieManager
-import java.net.CookiePolicy
 import java.util.concurrent.TimeUnit
 
 /**
@@ -21,10 +21,17 @@ import java.util.concurrent.TimeUnit
 class ApiClient private constructor(context: Context) {
 
     private val cookieStore = PersistentCookieStore(context.applicationContext)
-    private val cookieManager = CookieManager(cookieStore, CookiePolicy.ACCEPT_ALL)
 
     private val client: OkHttpClient = OkHttpClient.Builder()
-        .cookieJar(JavaNetCookieJar(cookieManager))
+        .cookieJar(object : CookieJar {
+            override fun loadForRequest(url: HttpUrl): List<Cookie> {
+                return cookieStore.getCookiesForDomain(url.host)
+            }
+
+            override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
+                cookieStore.saveCookiesForDomain(url.host, cookies)
+            }
+        })
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
         .writeTimeout(15, TimeUnit.SECONDS)
